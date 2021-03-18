@@ -1,0 +1,43 @@
+#Create an Amazon DocumentDB cluster
+aws docdb create-db-cluster \
+    --db-cluster-identifier {REPLACE WITH YOUR CLUSTER NAME} \
+    --engine docdb \
+    --master-username {REPLACE WITH YOUR USERNAME} \
+    --master-user-password {REPLACE WITH YOUR PASSWORD} \
+    --db-cluster-parameter-group-name {REPLACE WITH YOUR PARAMETER GROUP} \
+    --db-subnet-group-name {REPLACE WITH YOUR SUBNET GROUP} \
+    --engine-version 4.0.0 \
+    --deletion-protection \
+    --storage-encrypted \
+    --enable-cloudwatch-logs-exports audit \
+    --vpc-security-group-ids {REPLACE WITH YOUR SECURITY GROUP(S)} \
+    --output table
+
+#Add an instance to the cluster
+aws docdb create-db-instance \
+    --db-cluster-identifier {REPLACE WITH YOUR CLUSTER NAME} \
+    --db-instance-class db.t3.medium \
+    --db-instance-identifier {REPLACE WITH YOUR CLUSTER NAME}-1 \
+    --engine docdb \
+    --output table
+
+#Create a filter on the audit log for failed logins
+aws logs put-metric-filter \
+    --log-group-name '/aws/docdb/{REPLACE WITH YOUR CLUSTER NAME}/audit' \
+    --filter-name DocDBLoginFilter \
+    --filter-pattern '{ $.param.message = "Authentication failure" }' \
+    --metric-transformations \
+    metricName=LoginFailureCnt,metricNamespace=DocDBCustomAlerts,metricValue=1,defaultValue=0
+
+#Create an alert of the failed login
+aws cloudwatch put-metric-alarm \
+    --alarm-name DocDBFailedLoginAlarm \
+    --alarm-description 'More than 5 failed logins in a 5 min period' \
+    --metric-name LoginFailureCnt \
+    --namespace DocDBCustomAlerts \
+    --statistic Sum \
+    --period 300 \
+    --threshold 5 \
+    --comparison-operator GreaterThanThreshold \
+    --evaluation-periods 1 \
+    --alarm-actions {REPLACE WITH THE ARN OF YOUR SNS TOPIC}
