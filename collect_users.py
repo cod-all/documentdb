@@ -5,7 +5,7 @@ import pymongo
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-# ask for varialbes
+# ask for variables
 defaultHost = "127.0.0.1"
 MongoHost = input ("MongoDB host connection details (default 127.0.0.1): ")
 if not MongoHost:
